@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Docquery — chat with your documents</title>
+<style>
+  :root {
+    --ink: #121212;
+    --paper: #EFEDE6;
+    --paper-dim: #B9B6AC;
+    --rule: #2A2A28;
+    --amber: #D9A23B;
+    --amber-dim: #8A6A2E;
+    --green: #5FA876;
+    --mono: 'IBM Plex Mono', 'SF Mono', Consolas, monospace;
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--sans);
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .app {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    height: 100vh;
+  }
+
+  /* ---------- Sidebar ---------- */
+  .sidebar {
+    border-right: 1px solid var(--rule);
+    padding: 28px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    overflow-y: auto;
+  }
+
+  .brand {
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--amber);
+  }
+
+  .brand small {
+    display: block;
+    color: var(--paper-dim);
+    letter-spacing: 0.04em;
+    margin-top: 4px;
+    font-size: 11px;
+  }
+
+  .upload-zone {
+    border: 1px dashed var(--rule);
+    border-radius: 2px;
+    padding: 20px 14px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .upload-zone:hover, .upload-zone.drag {
+    border-color: var(--amber-dim);
+    background: rgba(217,162,59,0.05);
+  }
+  .upload-zone input { display: none; }
+  .upload-label {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--paper-dim);
+  }
+  .upload-label strong { color: var(--paper); display:block; margin-bottom: 4px; font-size: 13px;}
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--paper-dim);
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 8px;
+  }
+
+  .doc-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+  }
+
+  .doc-card {
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--paper);
+  }
+  .doc-card .dot { color: var(--green); margin-right: 6px; }
+  .doc-empty {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--paper-dim);
+    padding: 10px 0;
+  }
+
+  .reset-btn {
+    background: none;
+    border: 1px solid var(--rule);
+    color: var(--paper-dim);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    padding: 8px 10px;
+    cursor: pointer;
+    border-radius: 2px;
+  }
+  .reset-btn:hover { border-color: #8a3b3b; color: #c97c7c; }
+
+  /* ---------- Chat pane ---------- */
+  .chat {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+
+  .chat-header {
+    padding: 24px 32px;
+    border-bottom: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--paper-dim);
+  }
+
+  .messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .msg { max-width: 640px; }
+  .msg.user { align-self: flex-end; }
+  .msg.assistant { align-self: flex-start; }
+
+  .msg .bubble {
+    padding: 14px 16px;
+    border-radius: 2px;
+    line-height: 1.55;
+    font-size: 14.5px;
+    white-space: pre-wrap;
+  }
+  .msg.user .bubble { background: var(--amber); color: #1a1305; }
+  .msg.assistant .bubble { background: #1c1c1a; border: 1px solid var(--rule); }
+
+  .sources {
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .source-chip {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--paper-dim);
+    border-left: 2px solid var(--amber-dim);
+    padding: 6px 10px;
+    background: rgba(255,255,255,0.02);
+  }
+  .source-chip b { color: var(--amber); }
+
+  .empty-state {
+    margin: auto;
+    text-align: center;
+    color: var(--paper-dim);
+    font-family: var(--mono);
+    font-size: 13px;
+    max-width: 420px;
+  }
+  .empty-state .glyph { font-size: 28px; margin-bottom: 12px; color: var(--amber-dim); }
+
+  .composer {
+    border-top: 1px solid var(--rule);
+    padding: 20px 32px 28px;
+    display: flex;
+    gap: 12px;
+  }
+  .composer input {
+    flex: 1;
+    background: #1a1a18;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    color: var(--paper);
+    padding: 12px 14px;
+    font-size: 14px;
+    font-family: var(--sans);
+  }
+  .composer input:focus { outline: none; border-color: var(--amber-dim); }
+  .composer button {
+    background: var(--amber);
+    color: #1a1305;
+    border: none;
+    border-radius: 2px;
+    padding: 0 22px;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .composer button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .typing {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--paper-dim);
+  }
+
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-thumb { background: var(--rule); }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">DOCQUERY<small>retrieval-augmented chat · local demo</small></div>
+
+    <div class="upload-zone" id="uploadZone">
+      <input type="file" id="fileInput" accept=".pdf,.txt,.md" multiple>
+      <div class="upload-label">
+        <strong>＋ Add a document</strong>
+        PDF, .txt, or .md — click or drop
+      </div>
+    </div>
+
+    <div>
+      <div class="section-label">Indexed documents</div>
+      <div class="doc-list" id="docList">
+        <div class="doc-empty">Nothing uploaded yet.</div>
+      </div>
+    </div>
+
+    <button class="reset-btn" id="resetBtn">Clear all documents</button>
+  </aside>
+
+  <main class="chat">
+    <div class="chat-header">Ask anything about the documents in the index on the left.</div>
+    <div class="messages" id="messages">
+      <div class="empty-state">
+        <div class="glyph">⌗</div>
+        Upload a document, then ask it a question.<br>Answers are grounded only in what you've uploaded — with sources shown below each reply.
+      </div>
+    </div>
+    <form class="composer" id="composer">
+      <input type="text" id="questionInput" placeholder="Ask a question about your documents…" autocomplete="off">
+      <button type="submit" id="sendBtn">Ask</button>
+    </form>
+  </main>
+</div>
+
+<script>
+const API = window.location.origin;
+
+const fileInput = document.getElementById('fileInput');
+const uploadZone = document.getElementById('uploadZone');
+const docList = document.getElementById('docList');
+const messages = document.getElementById('messages');
+const composer = document.getElementById('composer');
+const questionInput = document.getElementById('questionInput');
+const sendBtn = document.getElementById('sendBtn');
+const resetBtn = document.getElementById('resetBtn');
+
+let emptyStateShown = true;
+let conversationHistory = []; // [{role, content}] for multi-turn context
+
+uploadZone.addEventListener('click', () => fileInput.click());
+['dragover','dragleave','drop'].forEach(evt => {
+  uploadZone.addEventListener(evt, e => {
+    e.preventDefault();
+    uploadZone.classList.toggle('drag', evt === 'dragover');
+  });
+});
+uploadZone.addEventListener('drop', e => {
+  const files = e.dataTransfer.files;
+  if (files.length) handleFiles(files);
+});
+fileInput.addEventListener('change', () => handleFiles(fileInput.files));
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+async function handleFiles(files) {
+  for (const file of files) {
+    const card = addDocCard(file.name, 'indexing…');
+    const form = new FormData();
+    form.append('file', file);
+    try {
+      const res = await fetch(`${API}/upload`, { method: 'POST', body: form });
+      const data = await res.json();
+      if (res.ok) {
+        card.querySelector('.status').textContent = `${data.chunks_added} chunks`;
+      } else {
+        card.querySelector('.status').textContent = 'error';
+        card.querySelector('.dot').style.color = '#c97c7c';
+      }
+    } catch (err) {
+      card.querySelector('.status').textContent = 'offline';
+    }
+  }
+}
+
+function addDocCard(name, status) {
+  if (docList.querySelector('.doc-empty')) docList.innerHTML = '';
+  const card = document.createElement('div');
+  card.className = 'doc-card';
+  card.innerHTML = `<span><span class="dot">●</span>${escapeHtml(name)}</span><span class="status">${status}</span>`;
+  docList.appendChild(card);
+  return card;
+}
+
+resetBtn.addEventListener('click', async () => {
+  await fetch(`${API}/reset`, { method: 'POST' });
+  docList.innerHTML = '<div class="doc-empty">Nothing uploaded yet.</div>';
+  messages.innerHTML = `<div class="empty-state"><div class="glyph">⌗</div>Upload a document, then ask it a question.<br>Answers are grounded only in what you've uploaded — with sources shown below each reply.</div>`;
+  emptyStateShown = true;
+  conversationHistory = [];
+});
+
+composer.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (sendBtn.disabled) return;
+  const question = questionInput.value.trim();
+  if (!question) return;
+
+  if (emptyStateShown) { messages.innerHTML = ''; emptyStateShown = false; }
+
+  addMessage(question, 'user');
+  questionInput.value = '';
+  sendBtn.disabled = true;
+
+  // Create assistant bubble for streaming into
+  const wrap = document.createElement('div');
+  wrap.className = 'msg assistant';
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  bubble.textContent = '';
+  wrap.appendChild(bubble);
+  messages.appendChild(wrap);
+  messages.scrollTop = messages.scrollHeight;
+
+  try {
+    conversationHistory.push({ role: 'user', content: question });
+    const res = await fetch(`${API}/query/stream`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question, history: conversationHistory.slice(-6) })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      bubble.textContent = err.detail || 'The server returned an error.';
+      sendBtn.disabled = false;
+      return;
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let sourcesRendered = false;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop(); // keep incomplete line
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        try {
+          const payload = JSON.parse(line.slice(6));
+          if (payload.token) {
+            bubble.textContent += payload.token;
+            messages.scrollTop = messages.scrollHeight;
+          } else if (payload.sources && !sourcesRendered) {
+            sourcesRendered = true;
+            if (payload.sources.length) {
+              const srcWrap = document.createElement('div');
+              srcWrap.className = 'sources';
+              payload.sources.forEach(s => {
+                const chip = document.createElement('div');
+                chip.className = 'source-chip';
+                chip.innerHTML = `<b>${escapeHtml(s.source)}</b> · chunk ${s.chunk_id} · similarity ${s.score} — "${escapeHtml(s.preview)}"`;
+                srcWrap.appendChild(chip);
+              });
+              wrap.appendChild(srcWrap);
+            }
+          } else if (payload.error) {
+            bubble.textContent = payload.error;
+          }
+        } catch (_) {}
+      }
+    }
+    // Save full assistant reply to conversation history for follow-up context
+    if (bubble.textContent) {
+      conversationHistory.push({ role: 'assistant', content: bubble.textContent });
+    }
+  } catch (err) {
+    bubble.textContent = 'Could not reach the server. Is app.py running?';
+  }
+  sendBtn.disabled = false;
+});
+
+function addMessage(text, role, sources) {
+  const wrap = document.createElement('div');
+  wrap.className = `msg ${role}`;
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  bubble.textContent = text;
+  wrap.appendChild(bubble);
+
+  if (sources && sources.length) {
+    const srcWrap = document.createElement('div');
+    srcWrap.className = 'sources';
+    sources.forEach(s => {
+      const chip = document.createElement('div');
+      chip.className = 'source-chip';
+      chip.innerHTML = `<b>${escapeHtml(s.source)}</b> · chunk ${s.chunk_id} · similarity ${s.score} — "${escapeHtml(s.preview)}"`;
+      srcWrap.appendChild(chip);
+    });
+    wrap.appendChild(srcWrap);
+  }
+
+  messages.appendChild(wrap);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+function addTyping() {
+  const id = 'typing-' + Date.now();
+  const el = document.createElement('div');
+  el.className = 'msg assistant';
+  el.id = id;
+  el.innerHTML = `<div class="bubble typing">thinking…</div>`;
+  messages.appendChild(el);
+  messages.scrollTop = messages.scrollHeight;
+  return id;
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+DocQuery System Overview
+========================
+Author: Nate Green
+Version: 1.0
+Date: June 2026
+
+WHAT IS DOCQUERY
+----------------
+DocQuery is a Retrieval-Augmented Generation (RAG) system that allows users 
+to upload documents and ask questions about them in plain English. Answers are 
+grounded only in the uploaded document — the system cannot make up information 
+not present in the source material.
+
+CORE COMPONENTS
+---------------
+1. Document Ingestion Pipeline
+   - Supports PDF, TXT, and Markdown files
+   - Uses pypdf for PDF text extraction
+   - Splits text into overlapping chunks (800 characters, 150 character overlap)
+   - Overlap prevents important sentences from being lost at chunk boundaries
+
+2. Vector Embedding Layer
+   - Uses OpenAI text-embedding-3-small model (1536 dimensions)
+   - Converts each text chunk into a numerical vector
+   - Vectors are normalized for cosine similarity search
+   - Requests are batched in groups of 500 to respect API limits
+
+3. FAISS Vector Store
+   - Uses IndexFlatIP (exact inner product / cosine similarity search)
+   - Persists index to disk so documents survive server restarts
+   - Thread-safe with locking for concurrent requests
+
+4. Retrieval Engine
+   - Embeds the user question using the same model
+   - Finds top 4 most similar chunks via cosine similarity
+   - Returns chunk text, source filename, chunk ID, and similarity score
+
+5. Answer Generation
+   - Passes retrieved chunks as context to GPT-4o-mini
+   - System prompt strictly instructs: answer ONLY from provided context
+   - Supports multi-turn conversation history
+   - Returns both the answer and source citations
+
+API ENDPOINTS
+-------------
+POST /upload    - Upload and index a document
+POST /query     - Ask a question (returns JSON)
+POST /query/stream - Ask a question (returns streaming SSE tokens)
+GET  /sources   - List indexed documents
+POST /reset     - Clear all documents
+GET  /health    - Server health check
+
+KNOWN LIMITATIONS
+-----------------
+- Fixed-size character chunking (not semantic)
+- In-memory FAISS (though now persisted to disk)
+- No authentication or user isolation
+- No hybrid search (keyword + vector)
+- No reranking layer
+- Single-user design
+
+PERFORMANCE BENCHMARKS
+-----------------------
+Run evaluate.py against this file to generate metrics:
+  python evaluate.py --doc sample_docs/docquery_overview.txt
+
+Expected results on this document:
+- Pass rate: 80%+ (some open-ended questions have no single right answer)
+- Citation rate: 100% (all answers should cite a source)
+- Avg latency: 1-3 seconds per query
+
+TECH STACK
+----------
+Backend:  FastAPI + uvicorn
+Vectors:  FAISS (faiss-cpu)
+Embeddings: OpenAI text-embedding-3-small
+LLM: GPT-4o-mini
+PDF: pypdf
+Frontend: Vanilla HTML/CSS/JavaScript (no build step)
+Deploy: Docker + Railway/Render
+
+COST ESTIMATE
+-------------
+Embedding 1 page of text: ~$0.00002
+Query (retrieval + generation): ~$0.0005
+20-page document + 20 queries: under $0.02 total

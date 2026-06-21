@@ -1,0 +1,13 @@
+version: "3.9"
+
+services:
+  docquery:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    volumes:
+      # Mount source so changes hot-reload without rebuilding image
+      - .:/app
+    command: uvicorn app:app --host 0.0.0.0 --port 8000 --reload
