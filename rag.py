@@ -28,7 +28,16 @@ import faiss
 from openai import OpenAI
 from pypdf import PdfReader
 
-client = OpenAI()  # reads OPENAI_API_KEY from environment
+_client = None
+
+def get_client():
+    """Lazy-initialize OpenAI client on first use.
+    This allows the server to start even if OPENAI_API_KEY is not yet set.
+    """
+    global _client
+    if _client is None:
+        _client = OpenAI()  # reads OPENAI_API_KEY from environment
+    return _client
 
 EMBEDDING_MODEL   = "text-embedding-3-small"   # 1536-dim, cheap, good enough
 CHAT_MODEL        = "gpt-4o-mini"               # cheap + fast; swap for gpt-4o for better answers
@@ -201,7 +210,7 @@ def embed_texts(texts: list[str]) -> np.ndarray:
     all_vectors: list[list[float]] = []
     for i in range(0, len(texts), BATCH_SIZE):
         batch = texts[i : i + BATCH_SIZE]
-        response = client.embeddings.create(model=EMBEDDING_MODEL, input=batch)
+        response = get_client().embeddings.create(model=EMBEDDING_MODEL, input=batch)
         all_vectors.extend([d.embedding for d in response.data])
     return np.array(all_vectors, dtype="float32")
 
@@ -272,7 +281,7 @@ def answer_question(question: str, history: list[dict] | None = None) -> dict:
         "content": f"Context:\n{context}\n\nQuestion: {question}\n\nAnswer based only on the context above."
     })
 
-    response = client.chat.completions.create(
+    response = get_client().chat.completions.create(
         model=CHAT_MODEL,
         messages=messages,
         temperature=0.2,
