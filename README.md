@@ -11,7 +11,7 @@
 
 ---
 
-![DocQuery Screenshot](assets/screenshot.png)
+[![DocQuery App](https://api.microlink.io/?url=https://docquery-rag-production.up.railway.app&screenshot=true&meta=false&embed=screenshot.url)](https://docquery-rag-production.up.railway.app)
 
 ---
 
