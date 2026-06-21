@@ -8,7 +8,7 @@ Built with **FastAPI + FAISS + OpenAI**. Fully functional RAG (Retrieval-Augment
 
 ## 🚀 Live Demo
 
-> *(Deploy link goes here — see deployment section below)*
+> **[https://docquery-rag-production.up.railway.app](https://docquery-rag-production.up.railway.app)**
 
 ---
 
