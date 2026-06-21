@@ -3,26 +3,30 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Docquery — chat with your documents</title>
+<title>DocQuery — Chat With Your Documents</title>
 <style>
   :root {
-    --ink: #121212;
-    --paper: #EFEDE6;
-    --paper-dim: #B9B6AC;
-    --rule: #2A2A28;
-    --amber: #D9A23B;
-    --amber-dim: #8A6A2E;
-    --green: #5FA876;
+    --bg: #0d0d0d;
+    --surface: #141414;
+    --surface-2: #1a1a1a;
+    --border: #2a2a2a;
+    --seafoam: #72c5a8;
+    --seafoam-dim: #4a9e85;
+    --seafoam-glow: rgba(114,197,168,0.08);
+    --olive: #8a9a5b;
+    --olive-dim: #6b7845;
+    --white: #f0f0f0;
+    --muted: #777;
+    --danger: #c97c7c;
     --mono: 'IBM Plex Mono', 'SF Mono', Consolas, monospace;
     --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   }
 
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    margin: 0;
-    background: var(--ink);
-    color: var(--paper);
+    background: var(--bg);
+    color: var(--white);
     font-family: var(--sans);
     height: 100vh;
     overflow: hidden;
@@ -30,63 +34,67 @@
 
   .app {
     display: grid;
-    grid-template-columns: 320px 1fr;
+    grid-template-columns: 300px 1fr;
     height: 100vh;
   }
 
   /* ---------- Sidebar ---------- */
   .sidebar {
-    border-right: 1px solid var(--rule);
-    padding: 28px 24px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 28px 20px;
     display: flex;
     flex-direction: column;
-    gap: 22px;
+    gap: 20px;
     overflow-y: auto;
   }
 
   .brand {
     font-family: var(--mono);
-    font-size: 13px;
-    letter-spacing: 0.12em;
+    font-size: 14px;
+    letter-spacing: 0.15em;
     text-transform: uppercase;
-    color: var(--amber);
+    color: var(--seafoam);
+    font-weight: 600;
   }
 
   .brand small {
     display: block;
-    color: var(--paper-dim);
+    color: var(--muted);
     letter-spacing: 0.04em;
-    margin-top: 4px;
+    margin-top: 5px;
     font-size: 11px;
+    font-weight: 400;
+    text-transform: none;
   }
 
   .upload-zone {
-    border: 1px dashed var(--rule);
-    border-radius: 2px;
-    padding: 20px 14px;
+    border: 1px dashed var(--seafoam-dim);
+    border-radius: 6px;
+    padding: 22px 14px;
     text-align: center;
     cursor: pointer;
     transition: border-color 0.15s ease, background 0.15s ease;
   }
   .upload-zone:hover, .upload-zone.drag {
-    border-color: var(--amber-dim);
-    background: rgba(217,162,59,0.05);
+    border-color: var(--seafoam);
+    background: var(--seafoam-glow);
   }
   .upload-zone input { display: none; }
   .upload-label {
     font-family: var(--mono);
     font-size: 12px;
-    color: var(--paper-dim);
+    color: var(--muted);
   }
-  .upload-label strong { color: var(--paper); display:block; margin-bottom: 4px; font-size: 13px;}
+  .upload-label strong { color: var(--seafoam); display:block; margin-bottom: 5px; font-size: 13px; }
 
   .section-label {
     font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 0.08em;
+    font-size: 10px;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--paper-dim);
-    border-bottom: 1px solid var(--rule);
+    color: var(--olive);
+    border-bottom: 1px solid var(--border);
     padding-bottom: 8px;
   }
 
@@ -101,47 +109,61 @@
     font-family: var(--mono);
     font-size: 12px;
     padding: 10px 12px;
-    border: 1px solid var(--rule);
-    border-radius: 2px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    color: var(--paper);
+    color: var(--white);
+    background: var(--surface-2);
   }
-  .doc-card .dot { color: var(--green); margin-right: 6px; }
+  .doc-card .dot { color: var(--seafoam); margin-right: 6px; }
   .doc-empty {
     font-family: var(--mono);
     font-size: 12px;
-    color: var(--paper-dim);
+    color: var(--muted);
     padding: 10px 0;
   }
 
   .reset-btn {
     background: none;
-    border: 1px solid var(--rule);
-    color: var(--paper-dim);
+    border: 1px solid var(--border);
+    color: var(--muted);
     font-family: var(--mono);
     font-size: 11px;
     letter-spacing: 0.05em;
     padding: 8px 10px;
     cursor: pointer;
-    border-radius: 2px;
+    border-radius: 6px;
+    transition: border-color 0.15s, color 0.15s;
   }
-  .reset-btn:hover { border-color: #8a3b3b; color: #c97c7c; }
+  .reset-btn:hover { border-color: var(--danger); color: var(--danger); }
 
   /* ---------- Chat pane ---------- */
   .chat {
     display: flex;
     flex-direction: column;
     height: 100vh;
+    background: var(--bg);
   }
 
   .chat-header {
-    padding: 24px 32px;
-    border-bottom: 1px solid var(--rule);
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border);
     font-family: var(--mono);
     font-size: 12px;
-    color: var(--paper-dim);
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .chat-header::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--seafoam);
+    display: inline-block;
   }
 
   .messages {
@@ -150,7 +172,7 @@
     padding: 32px;
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 20px;
   }
 
   .msg { max-width: 640px; }
@@ -158,14 +180,22 @@
   .msg.assistant { align-self: flex-start; }
 
   .msg .bubble {
-    padding: 14px 16px;
-    border-radius: 2px;
-    line-height: 1.55;
+    padding: 14px 18px;
+    border-radius: 8px;
+    line-height: 1.6;
     font-size: 14.5px;
     white-space: pre-wrap;
   }
-  .msg.user .bubble { background: var(--amber); color: #1a1305; }
-  .msg.assistant .bubble { background: #1c1c1a; border: 1px solid var(--rule); }
+  .msg.user .bubble {
+    background: var(--olive);
+    color: #fff;
+    border-radius: 8px 8px 2px 8px;
+  }
+  .msg.assistant .bubble {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px 8px 8px 2px;
+  }
 
   .sources {
     margin-top: 8px;
@@ -176,69 +206,78 @@
   .source-chip {
     font-family: var(--mono);
     font-size: 11px;
-    color: var(--paper-dim);
-    border-left: 2px solid var(--amber-dim);
+    color: var(--muted);
+    border-left: 2px solid var(--seafoam-dim);
     padding: 6px 10px;
-    background: rgba(255,255,255,0.02);
+    background: var(--surface-2);
+    border-radius: 0 4px 4px 0;
   }
-  .source-chip b { color: var(--amber); }
+  .source-chip b { color: var(--seafoam); }
 
   .empty-state {
     margin: auto;
     text-align: center;
-    color: var(--paper-dim);
+    color: var(--muted);
     font-family: var(--mono);
     font-size: 13px;
     max-width: 420px;
+    line-height: 1.7;
   }
-  .empty-state .glyph { font-size: 28px; margin-bottom: 12px; color: var(--amber-dim); }
+  .empty-state .glyph { font-size: 32px; margin-bottom: 14px; color: var(--seafoam-dim); }
 
   .composer {
-    border-top: 1px solid var(--rule);
-    padding: 20px 32px 28px;
+    border-top: 1px solid var(--border);
+    padding: 18px 32px 24px;
     display: flex;
-    gap: 12px;
+    gap: 10px;
+    background: var(--surface);
   }
   .composer input {
     flex: 1;
-    background: #1a1a18;
-    border: 1px solid var(--rule);
-    border-radius: 2px;
-    color: var(--paper);
-    padding: 12px 14px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--white);
+    padding: 12px 16px;
     font-size: 14px;
     font-family: var(--sans);
+    transition: border-color 0.15s;
   }
-  .composer input:focus { outline: none; border-color: var(--amber-dim); }
+  .composer input::placeholder { color: var(--muted); }
+  .composer input:focus { outline: none; border-color: var(--seafoam-dim); }
   .composer button {
-    background: var(--amber);
-    color: #1a1305;
+    background: var(--seafoam);
+    color: #0d0d0d;
     border: none;
-    border-radius: 2px;
-    padding: 0 22px;
+    border-radius: 6px;
+    padding: 0 24px;
     font-family: var(--mono);
     font-size: 12px;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     cursor: pointer;
+    font-weight: 700;
+    transition: background 0.15s;
   }
-  .composer button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .composer button:hover { background: var(--seafoam-dim); }
+  .composer button:disabled { opacity: 0.35; cursor: not-allowed; }
 
   .typing {
     font-family: var(--mono);
     font-size: 12px;
-    color: var(--paper-dim);
+    color: var(--muted);
   }
 
-  ::-webkit-scrollbar { width: 8px; }
-  ::-webkit-scrollbar-thumb { background: var(--rule); }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 </style>
 </head>
 <body>
 
 <div class="app">
   <aside class="sidebar">
-    <div class="brand">DOCQUERY<small>retrieval-augmented chat · local demo</small></div>
+    <div class="brand">DOCQUERY<small>Retrieval-Augmented Chat</small></div>
 
     <div class="upload-zone" id="uploadZone">
       <input type="file" id="fileInput" accept=".pdf,.txt,.md" multiple>
