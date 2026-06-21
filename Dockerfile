@@ -14,7 +14,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Railway/Render inject PORT as an env var; default to 8000 locally
-ENV PORT=8000
+ENV PORT=5000
 
 EXPOSE $PORT
 
